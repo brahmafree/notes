@@ -1,0 +1,129 @@
+redis安装
+redis启动 切换到安装下的redis目录，启用redis.conf文件  命令：redis-server redis.conf
+redis使用 再开一个客户端 命令：redis-cli
+
+1.增加依赖
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+2.配置文件添加多个redis库配置信息
+ 
+# Redis数据库索引（默认为0）
+spring.redis.database=0
+# Redis服务器地址
+spring.redis.host=127.0.0.1
+# Redis服务器连接端口
+spring.redis.port=6379
+# Redis服务器连接密码（默认为空）
+spring.redis.password=L409lKN3A8FZJPwVMBQp
+# 连接超时时间（毫秒）
+spring.redis.timeout=5000
+# Redis数据库索引
+spring.redis.database_1=1
+# Redis服务器地址
+spring.redis.host_1=127.0.0.1
+# Redis服务器连接端口
+spring.redis.port_1=6379
+# Redis服务器连接密码（默认为空）
+spring.redis.password_1=L409lKN3A8FZJPwVMBQp
+# 连接超时时间（毫秒）
+spring.redis.timeout_1=5000
+3.JAVA代码的形式申明注册redis bean 
+我这里仅以其中一个为例，另一个雷同，仅需把@Value注入的key名修改即可。
+ 
+package com.yunxi.cache.config;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import redis.clients.jedis.JedisPoolConfig;
+/**
+ * @ClassName RedisDevConfiguration
+ * @Description TODO
+ * @Author 云析-路飞
+ * @Date 2018/7/13 9:36
+ * @Version 1.0
+ */
+@Configuration
+public class Redis1Configuration {
+    @Bean(name = "redis1Template")
+    public StringRedisTemplate redisTemplate(@Value("${spring.redis.host_1}") String hostName,
+                                             @Value("${spring.redis.port_1}") int port, @Value("${spring.redis.password_1}") String password,
+                                             @Value("${spring.redis.database_1}") int index, @Value("${spring.redis.timeout_1}") long maxWaitMillis) {
+        StringRedisTemplate temple = new StringRedisTemplate();
+        temple.setConnectionFactory(
+                connectionFactory(hostName, port, password, 5, 10, index, maxWaitMillis, false));
+        return temple;
+    }
+    public RedisConnectionFactory connectionFactory(String hostName, int port, String password, int maxIdle,
+                                                    int maxTotal, int index, long maxWaitMillis, boolean testOnBorrow) {
+        JedisConnectionFactory jedis = new JedisConnectionFactory();
+        jedis.setHostName(hostName);
+        jedis.setPort(port);
+        if (null!=password && !"".equals(password)) {
+            jedis.setPassword(password);
+        }
+        if (index != 0) {
+            jedis.setDatabase(index);
+        }
+        jedis.setPoolConfig(poolCofig(maxIdle, maxTotal, maxWaitMillis, testOnBorrow));
+        // 初始化连接pool
+        jedis.afterPropertiesSet();
+        RedisConnectionFactory factory = jedis;
+        return factory;
+    }
+    public JedisPoolConfig poolCofig(int maxIdle, int maxTotal, long maxWaitMillis, boolean testOnBorrow) {
+        JedisPoolConfig poolCofig = new JedisPoolConfig();
+        poolCofig.setMaxIdle(maxIdle);
+        poolCofig.setMaxTotal(maxTotal);
+        poolCofig.setMaxWaitMillis(maxWaitMillis);
+        poolCofig.setTestOnBorrow(testOnBorrow);
+        return poolCofig;
+    }
+}
+ 
+4.使用
+ 
+ 
+package com.yunxi.cache.service;
+import com.yunxi.cache.dao.CacheOrderMapper;
+import com.yunxi.cache.pojo.CacheOrder;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import javax.annotation.Resource;
+/**
+ * @ClassName CacheOrderService
+ * @Description TODO
+ * @Author 云析-路飞
+ * @Date 2018/7/13 09:53
+ * @Version 1.0
+ */
+@Service
+public class CacheOrderService {
+  
+    @Resource(name="redis0Template")
+    private StringRedisTemplate template0;
+    @Resource(name = "redis1Template")
+    private StringRedisTemplate template1;
+    public void save(){
+        //往0号库中存入 luffy 
+        template0.opsForValue().set("luffy", "1111");
+        //往1号库中存入 april 
+        template1.opsForValue().set("april", "2222");
+       
+    }
+ 
+}

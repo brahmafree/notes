@@ -1,0 +1,41 @@
+﻿springcloudconfigserver configclient eurekaserver eurekaprovider eurekaclient eurekafeign 
+zuul hystrix bus stream sleuth
+1、配置中心
+客户端需要
+bootstrap.properties
+application.properties
+两个配置文件
+2、mysql数据库配置
+mybatis-spring-boot-starter 1.1.1
+mysql-connector-java
+sql映射文件需要放在resources目录下面
+在application.properties文件下面加上   mybatis.mapperLocations=classpath*:mapper/**/*.xml 支持通配符
+在启动类加上@MapperScan("com.springcloud.config.*")或者在DAO映射java文件类上加@Mapper注解
+3、maven dependencyManagement可以解决重复依赖问题
+   spring-boot-maven-plugin 可以解决热编译问题，每次修改java代码后不用重启
+4、注册中心负载均衡，针对同一个应用不同端口可以实现客户端负载均衡
+5、eureka高可用注册中心配置
+application-peer1.properties
+application-peer2.properties
+互相引用url地址
+客户端：指向url地址，用“，”分格
+6、feign远程调用外部系统方法
+引入openFeign依赖包
+启动类上加@EnableFeignClients(basePackages="com.cn.yiche.**")
+创建接口：和被调用的方法的注解，方法名，参数一模一样
+接口加@FeignClient(name="carA.provider")
+7、网关zuul 好比代理能够隐藏实际的请求路径，配置详见application.properties
+引入spring-cloud-starter-netflix-zuul依赖包
+启动类加上@EnableZuulProxy注解
+最关键还是ZuulFilter过滤器，继承这个类，可以再请求前后已经过滤器发生错误可以做一些业务处理，功能十分的强大
+但是记得在启动的时候初始化自定义的这个类！否则不会生效
+8、java代码热编译
+spring-boot-devtools
+spring-boot-maven-plugin
+9、springcloud+bus+rabbitmq
+开启ssh：systemctl status sshd
+查看防火墙：systemctl status firewalld
+firewall-cmd --list-all-zone
+查看可用端口：firewall-cmd --list-ports
+增加端口：firewall-cmd --add-port=80/tcp --zone=public --permanent
+重新加载：firewall-cmd --reload
